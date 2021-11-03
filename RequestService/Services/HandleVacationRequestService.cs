@@ -18,7 +18,9 @@ namespace RequestService.Services
         {
             var request = new
             {
-                Step = "request-validation",
+                Step = "draft",
+                From = "user1",
+                To = "user2",
                 Id = Guid.NewGuid()
             };
 
