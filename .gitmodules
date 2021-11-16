@@ -1,0 +1,3 @@
+[submodule "RequestService/CoreDTO"]
+	path = RequestService/CoreDTO
+	url = https://github.com/ITIS-MICROSERVICES-2021/CoreDTO.git

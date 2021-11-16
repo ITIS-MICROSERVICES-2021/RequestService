@@ -1,42 +1,50 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using CoreDTO.Redis;
+using CoreDTO.Redis.Vacation;
+using RabbitMQ.Services;
 using RedisIO.Services;
 
 namespace RequestService.Services
 {
     public class HandleBookkeepingRequestService
     {
-        private readonly RedisIOService _redisIoService;
+        private readonly IRedisIOService _redisIoService;
+        private readonly IRabbitMQService _rabbitMqService;
 
-        public HandleBookkeepingRequestService(RedisIOService redisIoService)
+        public HandleBookkeepingRequestService(IRedisIOService redisIoService, IRabbitMQService rabbitMqService)
         {
             _redisIoService = redisIoService;
+            _rabbitMqService = rabbitMqService;
         }
 
-        public async Task PrepareRequestBookkeeping(Object request)
+        public async Task PrepareRequestBookkeeping(VacationRequestDto request)
         {
-            var input = new
+            /*var input = new VacationRequestDto
             {
-                Docks = "Doc",
-                From = "Rabot'aga",
-                To = "Nachal'nik",
-                RequestStatus = "на ревью у рука",
-                RequestId = Guid.NewGuid()
-            };
+                Attachments = new Dictionary<string, byte[]>() {{"Docks", Array.Empty<byte>()}},
+                Author = "Rabot'aga",
+                Status = VacationRequestStatus.BossReview,
+                Id = Guid.NewGuid()
+            };*/
 
-            var requestFromRedis = await _redisIoService.GetAsync<dynamic>(input.RequestId.ToString());
+            var requestFromRedis = await _redisIoService.GetAsync<VacationRequestDto>(request.Id.ToString());
 
-            var isValid = requestFromRedis != null && requestFromRedis.Id == input.RequestId &&
-                          requestFromRedis.Status == input.RequestStatus;
+            var isValid = requestFromRedis != null && requestFromRedis.Id == request.Id &&
+                          requestFromRedis.Status == request.Status && string.IsNullOrEmpty(request.RejectReason);
 
             if (isValid)
             {
-                // ..
+                request.Status = VacationRequestStatus.Finished;
             }
             else
             {
-                // ..
+                request.Status = VacationRequestStatus.Rejected;
             }
+            
+            await _redisIoService.AddAsync(request.Id.ToString(), request);
+            _rabbitMqService.Publish(request, "BookKeeping", "templateService");
         }
     }
 }
