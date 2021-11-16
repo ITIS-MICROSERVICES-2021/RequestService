@@ -11,6 +11,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using RabbitMQ.Extensions;
+using RedisIO.Converter;
+using RedisIO.ServicesExtensions;
+using StackExchange.Redis;
 
 namespace RequestService
 {
@@ -27,6 +31,15 @@ namespace RequestService
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            services.AddRabbitMQ();
+            services.AddRedisIO<JsonRedisConverter>(builder =>
+                builder
+                    .UseJsonConverter()
+                    .UseConfiguration(new ConfigurationOptions()
+                    {
+                        //Тут надо какой - то хост, взял пока из доков редиса
+                        EndPoints = { "localhost:6379" }
+                    }));
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo {Title = "RequestService", Version = "v1"});

@@ -1,40 +1,47 @@
 ﻿using System;
 using System.Threading.Tasks;
+using CoreDTO.Redis.Vacation;
+using RabbitMQ.Services;
 using RedisIO.Services;
-using RequestService.Dto;
 
 namespace RequestService.Services
 {
     public class HandleVacationRequestService
     {
         private readonly IRedisIOService _redis;
+        private readonly IRabbitMQService _rabbitMqService;
 
-        public HandleVacationRequestService(IRedisIOService redis)
+        public HandleVacationRequestService(IRedisIOService redis, IRabbitMQService rabbitMqService)
         {
             _redis = redis;
+            _rabbitMqService = rabbitMqService;
         }
 
-        public async Task Handle(object req = null)
+        public async Task Handle(VacationRequestDto request)
         {
-            var request = new
+            /*var request = new VacationRequestDto()
             {
-                Step = "draft",
-                From = "user1",
-                To = "user2",
+                Status = VacationRequestStatus.Started,
+                Author = "user 1",
+                StartAt = DateTimeOffset.Now,
+                EndAt = DateTimeOffset.Now + TimeSpan.FromDays(7),
+                Payload = new VacationPayload {DateFrom = DateTimeOffset.Now, DateTo = DateTimeOffset.Now + TimeSpan.FromDays(7)},
                 Id = Guid.NewGuid()
-            };
+            };*/
 
             var requestFromRedis = await _redis.GetAsync<VacationRequestDto>(request.Id.ToString());
 
-            var isValid = requestFromRedis != null && requestFromRedis.Step == request.Step;
+            var isValid = requestFromRedis != null && requestFromRedis.Status == request.Status;
 
             if (isValid)
             {
-                // send mq request to userservice
+                request.Status = VacationRequestStatus.BookKeepReview;
+                await _redis.AddAsync(request.Id.ToString(), request);
+                _rabbitMqService.Publish(request, "vacation", "userService");
             }
             else
             {
-                // .
+                // 
             }
         }
     }
