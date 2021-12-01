@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using CoreDTO.Redis.Vacation;
+using RabbitMQ.Client;
 using RabbitMQ.Services;
 using RedisIO.Services;
+using VacationRequestDto = CoreDTO.Redis.Vacation.VacationRequestDto;
 
 namespace RequestService.Services
 {
@@ -37,7 +39,7 @@ namespace RequestService.Services
             {
                 request.Status = VacationRequestStatus.BookKeepReview;
                 await _redis.AddAsync(request.Id.ToString(), request);
-                _rabbitMqService.Publish(request, "vacation", "userService");
+                _rabbitMqService.Publish(request, ExchangeType.Direct, "userService");
             }
             else
             {
